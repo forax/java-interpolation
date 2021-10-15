@@ -4,30 +4,49 @@ import com.github.forax.interpolator.TemplatePolicy;
 import com.github.forax.interpolator.TemplatedString;
 
 import java.lang.invoke.CallSite;
-import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.MutableCallSite;
 import java.lang.reflect.Modifier;
-import java.util.Objects;
 
+import static java.lang.invoke.MethodHandles.dropArguments;
 import static java.lang.invoke.MethodHandles.exactInvoker;
 import static java.lang.invoke.MethodHandles.foldArguments;
 import static java.lang.invoke.MethodHandles.guardWithTest;
+import static java.lang.invoke.MethodHandles.insertArguments;
 import static java.lang.invoke.MethodType.methodType;
 
 public class TemplatePolicyFactory {
+  private static final MethodHandle TEMPLATE_POLICY_APPLY;
+  static {
+    var lookup = MethodHandles.publicLookup();
+    try {
+      TEMPLATE_POLICY_APPLY = lookup.findVirtual(TemplatePolicy.class, "apply",
+          methodType(Object.class, TemplatedString.class, Object[].class));
+    } catch (NoSuchMethodException | IllegalAccessException e) {
+      throw new AssertionError(e);
+    }
+  }
+
+  public static MethodHandle applyAsMethodHandle(TemplatedString template, MethodType type) {
+    var target = insertArguments(TEMPLATE_POLICY_APPLY, 1, template).asVarargsCollector(Object[].class);
+    return target.asType(type);
+  }
+
   private static final class InliningCache extends MutableCallSite {
-    private static final MethodHandle SLOW_PATH, TYPE_CHECK;
+    private static final MethodHandle SLOW_PATH, DEOPTIMIZE, TYPE_CHECK;
     static {
       var lookup = MethodHandles.lookup();
       try {
         SLOW_PATH = lookup.findVirtual(InliningCache.class, "slowPath",
             methodType(MethodHandle.class, TemplatePolicy.class));
+        DEOPTIMIZE = lookup.findVirtual(InliningCache.class, "deoptimize",
+            methodType(MethodHandle.class));
         TYPE_CHECK = lookup.findStatic(InliningCache.class, "typeCheck",
             methodType(boolean.class, Class.class, TemplatePolicy.class));
+
       } catch (NoSuchMethodException | IllegalAccessException e) {
         throw new AssertionError(e);
       }
@@ -62,9 +81,15 @@ public class TemplatePolicyFactory {
       } else {
         var guard = guardWithTest(TYPE_CHECK.bindTo(receiver).asType(MethodType.methodType(boolean.class, type.parameterType(0))),
             target,
-            new InliningCache(type, template).dynamicInvoker());
+            foldArguments(exactInvoker(type), dropArguments(DEOPTIMIZE.bindTo(this), 0, type.parameterList())));
         setTarget(guard);
       }
+      return target;
+    }
+
+    private MethodHandle deoptimize() {
+      var target = applyAsMethodHandle(template, type());
+      setTarget(target);
       return target;
     }
   }
