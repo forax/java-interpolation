@@ -1,14 +1,15 @@
 package com.github.forax.interpolator;
 
+import java.lang.invoke.MethodType;
 import java.util.List;
 
 public interface TemplatedString {
-  static TemplatedString parse(String text) {
-    return TemplatedStringImpl.parse(text);
+  static TemplatedString parse(String text, List<Class<?>> bindingTypes) {
+    return TemplatedStringImpl.parse(text, bindingTypes);
   }
 
-  int bindings();
   List<Token> tokens();
+  List<Binding> bindings();
 
   sealed interface Token { }
   record Text(String text) implements Token {
@@ -17,10 +18,10 @@ public interface TemplatedString {
       return text;
     }
   }
-  record Binding(String name) implements Token {
+  record Binding(String name, Class<?> type) implements Token {
     @Override
     public String toString() {
-      return "\\(" + name + ")";
+      return "\\(" + type.getName() + " " + name + ")";
     }
   }
 }

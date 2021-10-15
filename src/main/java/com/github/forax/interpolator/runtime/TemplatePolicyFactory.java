@@ -94,7 +94,8 @@ public class TemplatePolicyFactory {
     }
   }
 
-  public static CallSite boostrap(Lookup lookup, String name, MethodType type, TemplatedString template) {
-    return new InliningCache(type, template);
+  public static CallSite boostrap(Lookup lookup, String name, MethodType type, String template) {
+    var templatedString = TemplatedString.parse(template, type.dropParameterTypes(0, 1).parameterList());
+    return new InliningCache(type, templatedString);
   }
 }

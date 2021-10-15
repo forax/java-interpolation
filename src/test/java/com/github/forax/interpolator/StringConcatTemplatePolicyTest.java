@@ -13,14 +13,16 @@ import java.lang.invoke.StringConcatFactory;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static java.lang.invoke.MethodType.methodType;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TemplatePolicyTest {
-
+public class StringConcatTemplatePolicyTest {
   static final class StringConcat implements TemplatePolicy<String, RuntimeException> {
     @Override
     public String apply(TemplatedString template, Object... args) {
-      if (template.bindings() != args.length) {
+      if (template.bindings().size() != args.length) {
         throw new IllegalArgumentException(template + " does not accept " + Arrays.toString(args));
       }
       var bindings = 0;
@@ -35,34 +37,34 @@ public class TemplatePolicyTest {
     }
   }
 
-  private static final StringConcat STRING_CONCAT = new StringConcat();
+  private static final StringConcat FMT = new StringConcat();
 
   @Test
   public void testStringConcatApply() {
-    var template = TemplatedString.parse("Hello \\(name) !");
+    var template = TemplatedString.parse("Hello \\(name) !", List.of(String.class));
     assertEquals("Hello Bob !",
-        STRING_CONCAT.apply(template, "Bob"));
+        FMT.apply(template, "Bob"));
   }
 
   @Test
   public void testStringConcatApplyWrongNumberOfArguments() {
-    var template = TemplatedString.parse("Hello \\(name) !");
+    var template = TemplatedString.parse("Hello \\(name) !", List.of(String.class));
     assertAll(
-        () -> assertThrows(IllegalArgumentException.class, () -> STRING_CONCAT.apply(template)),
-        () -> assertThrows(IllegalArgumentException.class, () -> STRING_CONCAT.apply(template, "one", "two"))
+        () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template)),
+        () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template, "one", "two"))
     );
   }
 
   private static final MethodHandle INDY = TemplatePolicyFactory.boostrap(
       MethodHandles.lookup(),
       "",
-      MethodType.methodType(String.class, StringConcat.class, String.class, int.class),
-      TemplatedString.parse("name: \\(name) age: \\(age)")
+      methodType(String.class, StringConcat.class, String.class, int.class),
+      "name: \\(name) age: \\(age)"
   ).dynamicInvoker();
 
   @Test
   public void testStringConcatIndy() throws Throwable {
-    var text = (String) INDY.invokeExact(STRING_CONCAT, "Bob", 24);
+    var text = (String) INDY.invokeExact(FMT, "Bob", 24);
     assertEquals("name: Bob age: 24", text);
   }
 
@@ -94,69 +96,18 @@ public class TemplatePolicyTest {
     }
   }
 
-  private static final StringConcatOptimized STRING_CONCAT_OPTIMIZED = new StringConcatOptimized();
+  private static final StringConcatOptimized FMT_OPTIMIZED = new StringConcatOptimized();
 
   private static final MethodHandle INDY_OPTIMIZED = TemplatePolicyFactory.boostrap(
       MethodHandles.lookup(),
       "",
-      MethodType.methodType(String.class, StringConcatOptimized.class, String.class, int.class),
-      TemplatedString.parse("name: \\(name) age: \\(age)")
+      methodType(String.class, StringConcatOptimized.class, String.class, int.class),
+      "name: \\(name) age: \\(age)"
   ).dynamicInvoker();
 
   @Test
   public void testStringConcatOptimizedIndy() throws Throwable {
-    var text = (String) INDY_OPTIMIZED.invokeExact(STRING_CONCAT_OPTIMIZED, "Bob", 24);
+    var text = (String) INDY_OPTIMIZED.invokeExact(FMT_OPTIMIZED, "Bob", 24);
     assertEquals("name: Bob age: 24", text);
-  }
-
-  static abstract class TemplatePolicyBase implements TemplatePolicy<Integer, RuntimeException> {
-    @Override
-    public abstract Integer apply(TemplatedString template, Object... args);
-  }
-
-  static final class TemplatePolicySubtype1 extends TemplatePolicyBase {
-    @Override
-    public Integer apply(TemplatedString template, Object... args) {
-      return 1;
-    }
-  }
-  static final class TemplatePolicySubtype2 extends TemplatePolicyBase {
-    @Override
-    public Integer apply(TemplatedString template, Object... args) {
-      return 2;
-    }
-  }
-  static final class TemplatePolicySubtype3 extends TemplatePolicyBase {
-    @Override
-    public Integer apply(TemplatedString template, Object... args) {
-      return 3;
-    }
-  }
-
-  @Test
-  public void testApplyHierarchy() {
-    var template = TemplatedString.parse("");
-    var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
-
-    for(var i = 0; i < policies.size(); i++) {
-      assertEquals(i + 1, policies.get(i).apply(template));
-    }
-  }
-
-  private static final MethodHandle INDY_HIERARCHY = TemplatePolicyFactory.boostrap(
-      MethodHandles.lookup(),
-      "",
-      MethodType.methodType(int.class, TemplatePolicyBase.class),
-      TemplatedString.parse("")
-  ).dynamicInvoker();
-
-  @Test
-  public void testIndyHierarchy() throws Throwable {
-    var template = TemplatedString.parse("");
-    var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
-
-    for(var i = 0; i < policies.size(); i++) {
-      assertEquals(i + 1, (int) INDY_HIERARCHY.invokeExact(policies.get(i)));
-    }
   }
 }
