@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.StringConcatException;
 import java.lang.invoke.StringConcatFactory;
 import java.util.Arrays;
@@ -25,12 +24,11 @@ public class StringConcatTemplatePolicyTest {
       if (template.bindings().size() != args.length) {
         throw new IllegalArgumentException(template + " does not accept " + Arrays.toString(args));
       }
-      var bindings = 0;
       var builder = new StringBuilder();
       for(var token: template.tokens()) {
         builder.append(switch(token) {
           case Text text -> text.text();
-          case Binding binding -> String.valueOf(args[bindings++]);
+          case Binding binding -> args[binding.argumentIndex()];
         });
       }
       return builder.toString();
@@ -41,14 +39,14 @@ public class StringConcatTemplatePolicyTest {
 
   @Test
   public void testStringConcatApply() {
-    var template = TemplatedString.parse("Hello \\(name) !", List.of(String.class));
+    var template = TemplatedString.parse("Hello \\(name) !", String.class, List.of(String.class));
     assertEquals("Hello Bob !",
         FMT.apply(template, "Bob"));
   }
 
   @Test
   public void testStringConcatApplyWrongNumberOfArguments() {
-    var template = TemplatedString.parse("Hello \\(name) !", List.of(String.class));
+    var template = TemplatedString.parse("Hello \\(name) !", String.class, List.of(String.class));
     assertAll(
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template)),
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template, "one", "two"))
@@ -75,8 +73,7 @@ public class StringConcatTemplatePolicyTest {
     }
 
     @Override
-    public MethodHandle asMethodHandle(TemplatedString template, MethodType type) {
-      var bindings = 0;
+    public MethodHandle asMethodHandle(TemplatedString template) {
       var builder = new StringBuilder();
       for(var token: template.tokens()) {
         builder.append(switch(token) {
@@ -85,9 +82,10 @@ public class StringConcatTemplatePolicyTest {
         });
       }
       var recipe = builder.toString();
+      var methodType = methodType(template.returnType(), template.bindings().stream().map(Binding::type).toArray(Class[]::new));
       MethodHandle target;
       try {
-        target = StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", type.dropParameterTypes(0, 1), recipe)
+        target = StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
             .dynamicInvoker();
       } catch (StringConcatException e) {
         throw (LinkageError) new LinkageError().initCause(e);

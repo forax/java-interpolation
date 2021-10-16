@@ -9,6 +9,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.MutableCallSite;
+import java.lang.invoke.WrongMethodTypeException;
 import java.lang.reflect.Modifier;
 
 import static java.lang.invoke.MethodHandles.dropArguments;
@@ -30,9 +31,8 @@ public class TemplatePolicyFactory {
     }
   }
 
-  public static MethodHandle applyAsMethodHandle(TemplatedString template, MethodType type) {
-    var target = insertArguments(TEMPLATE_POLICY_APPLY, 1, template).asVarargsCollector(Object[].class);
-    return target.asType(type);
+  public static MethodHandle applyAsMethodHandle(TemplatedString template) {
+    return insertArguments(TEMPLATE_POLICY_APPLY, 1, template).asVarargsCollector(Object[].class);
   }
 
   private static final class InliningCache extends MutableCallSite {
@@ -67,12 +67,14 @@ public class TemplatePolicyFactory {
     private MethodHandle slowPath(TemplatePolicy<?,?> policy) {
       var receiver = policy.getClass();
       var type = type();
-      var target = policy.asMethodHandle(template, type);
+      var target = policy.asMethodHandle(template);
       if (target == null) {
         throw new LinkageError("return value of " + receiver.getName() + " is null");
       }
-      if (!target.type().equals(type)) {
-        throw new LinkageError("return value of " + receiver.getName() + " as the wrong type " + target + " " + type);
+      try {
+        target = target.asType(type());
+      } catch(WrongMethodTypeException e) {
+        throw new LinkageError( target + " from template " + receiver.getName() + " is incompatible with " + type, e);
       }
 
       var declaredReceiver = type.parameterType(0);
@@ -88,14 +90,14 @@ public class TemplatePolicyFactory {
     }
 
     private MethodHandle deoptimize() {
-      var target = applyAsMethodHandle(template, type());
+      var target = applyAsMethodHandle(template).asType(type());
       setTarget(target);
       return target;
     }
   }
 
   public static CallSite boostrap(Lookup lookup, String name, MethodType type, String template) {
-    var templatedString = TemplatedString.parse(template, type.dropParameterTypes(0, 1).parameterList());
+    var templatedString = TemplatedString.parse(template, type.returnType(), type.dropParameterTypes(0, 1).parameterList());
     return new InliningCache(type, templatedString);
   }
 }

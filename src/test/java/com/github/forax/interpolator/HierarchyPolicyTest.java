@@ -1,16 +1,10 @@
 package com.github.forax.interpolator;
 
-import com.github.forax.interpolator.TemplatedString.Binding;
-import com.github.forax.interpolator.TemplatedString.Text;
 import com.github.forax.interpolator.runtime.TemplatePolicyFactory;
 import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.invoke.StringConcatException;
-import java.lang.invoke.StringConcatFactory;
-import java.util.Arrays;
 import java.util.List;
 
 import static java.lang.invoke.MethodType.methodType;
@@ -43,7 +37,7 @@ public class HierarchyPolicyTest {
 
   @Test
   public void testApplyHierarchy() {
-    var template = TemplatedString.parse("", List.of());
+    var template = TemplatedString.parse("", int.class, List.of());
     var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
 
     for(var i = 0; i < policies.size(); i++) {
@@ -60,7 +54,7 @@ public class HierarchyPolicyTest {
 
   @Test
   public void testIndyHierarchy() throws Throwable {
-    var template = TemplatedString.parse("", List.of());
+    var template = TemplatedString.parse("", int.class, List.of());
     var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
 
     for(var i = 0; i < policies.size(); i++) {

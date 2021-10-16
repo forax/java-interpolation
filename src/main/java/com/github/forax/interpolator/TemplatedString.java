@@ -3,10 +3,12 @@ package com.github.forax.interpolator;
 import java.lang.invoke.MethodType;
 import java.util.List;
 
-public interface TemplatedString {
-  static TemplatedString parse(String text, List<Class<?>> bindingTypes) {
-    return TemplatedStringImpl.parse(text, bindingTypes);
+public sealed interface TemplatedString permits TemplatedStringImpl {
+  static TemplatedString parse(String text, Class<?> returnType, List<Class<?>> bindingTypes) {
+    return TemplatedStringImpl.parse(text, returnType, bindingTypes);
   }
+
+  Class<?> returnType();
 
   List<Token> tokens();
   List<Binding> bindings();
@@ -18,7 +20,7 @@ public interface TemplatedString {
       return text;
     }
   }
-  record Binding(String name, Class<?> type) implements Token {
+  record Binding(String name, Class<?> type, int argumentIndex) implements Token {
     @Override
     public String toString() {
       return "\\(" + type.getName() + " " + name + ")";
