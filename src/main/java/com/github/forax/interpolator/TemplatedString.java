@@ -4,7 +4,7 @@ import java.util.List;
 
 public sealed interface TemplatedString permits TemplatedStringImpl {
   /**
-   * The caracter used to represent a hole/a binding in the templated string
+   * The character used to represent a hole/a binding in the templated string
    */
   char OBJECT_REPLACEMENT_CHARACTER = '\uFFFC';
 
