@@ -354,7 +354,7 @@ public class JSONLiteralPolicyTest {
 
     @Override
     public MethodHandle asMethodHandle(TemplatedString template) {
-      if (template.bindings().isEmpty()) {
+      if (template.parameters().isEmpty()) {
         var result = apply(template);
         return MethodHandles.dropArguments(MethodHandles.constant(result.getClass(), result), 0, getClass());
       }
@@ -371,7 +371,7 @@ public class JSONLiteralPolicyTest {
           "sex": true
         }
         """,
-        JSONObject.class, new String[]{  "name", "age" }, String.class, int.class);
+        JSONObject.class, String.class, int.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonObject = (JSONObject) policy.apply(template, "Bob", 77);
     assertEquals(Map.of("name", "Bob", "age", 77, "sex", true), jsonObject.map());
@@ -382,7 +382,7 @@ public class JSONLiteralPolicyTest {
     var template = TemplatedString.parse("""
         [ 42, \uFFFC, \uFFFC, "Ana" ]
         """,
-        JSONObject.class, new String[] { "value1", "value2" }, String.class, boolean.class);
+        JSONObject.class, String.class, boolean.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonArray = (JSONArray) policy.apply(template, "Alice", false);
     assertEquals(List.of(42, "Alice", false, "Ana"), jsonArray.list());
@@ -398,8 +398,7 @@ public class JSONLiteralPolicyTest {
           "age": \uFFFC,
           "sex": true
         }
-        """,
-      "name", "age"
+        """
   ).dynamicInvoker();
 
   @Test
@@ -440,8 +439,7 @@ public class JSONLiteralPolicyTest {
       methodType(JSONArray.class, JSONLiteralTemplatePolicy.class, String.class, boolean.class),
       """
         [ 42, \uFFFC, \uFFFC, "Ana" ]
-        """,
-      "value1", "value2"
+        """
   ).dynamicInvoker();
 
   @Test

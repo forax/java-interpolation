@@ -1,6 +1,6 @@
 package com.github.forax.interpolator;
 
-import com.github.forax.interpolator.TemplatedString.Binding;
+import com.github.forax.interpolator.TemplatedString.Parameter;
 import com.github.forax.interpolator.TemplatedString.Text;
 import com.github.forax.interpolator.runtime.TemplatePolicyFactory;
 import org.junit.jupiter.api.Test;
@@ -20,14 +20,14 @@ public class StringConcatTemplatePolicyTest {
   static final class StringConcat implements TemplatePolicy<String, RuntimeException> {
     @Override
     public String apply(TemplatedString template, Object... args) {
-      if (template.bindings().size() != args.length) {
+      if (template.parameters().size() != args.length) {
         throw new IllegalArgumentException(template + " does not accept " + Arrays.toString(args));
       }
       var builder = new StringBuilder();
       for(var segment: template.segments()) {
         builder.append(switch(segment) {
           case Text text -> text.text();
-          case Binding binding -> args[binding.argumentIndex()];
+          case Parameter parameter -> args[parameter.index()];
         });
       }
       return builder.toString();
@@ -39,7 +39,7 @@ public class StringConcatTemplatePolicyTest {
   @Test
   public void testStringConcatApply() {
     var template = TemplatedString.parse("Hello \uFFFC !",
-        String.class, new String[] { "name" }, String.class);
+        String.class, String.class);
     assertEquals("Hello Bob !",
         FMT.apply(template, "Bob"));
   }
@@ -47,7 +47,7 @@ public class StringConcatTemplatePolicyTest {
   @Test
   public void testStringConcatApplyWrongNumberOfArguments() {
     var template = TemplatedString.parse("Hello \uFFFC !",
-        String.class, new String[] { "name" }, String.class);
+        String.class, String.class);
     assertAll(
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template)),
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template, "one", "two"))
@@ -58,8 +58,7 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcat.class, String.class, int.class),
-      "name: \uFFFC age: \uFFFC",
-      "name", "age"
+      "name: \uFFFC age: \uFFFC"
   ).dynamicInvoker();
 
   @Test
@@ -77,7 +76,7 @@ public class StringConcatTemplatePolicyTest {
     @Override
     public MethodHandle asMethodHandle(TemplatedString template) {
       var recipe = template.template().replace('\uFFFC', '\u0001');
-      var methodType = methodType(template.returnType(), template.bindings().stream().map(Binding::type).toArray(Class[]::new));
+      var methodType = methodType(template.returnType(), template.parameters().stream().map(Parameter::type).toArray(Class[]::new));
       MethodHandle target;
       try {
         target = StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
@@ -95,8 +94,7 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcatOptimized.class, String.class, int.class),
-      "name: \uFFFC age: \uFFFC",
-      "age", "name"
+      "name: \uFFFC age: \uFFFC"
   ).dynamicInvoker();
 
   @Test

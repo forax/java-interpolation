@@ -37,7 +37,7 @@ public class HierarchyPolicyTest {
 
   @Test
   public void testApplyHierarchy() {
-    var template = TemplatedString.parse("", int.class, new String[0]);
+    var template = TemplatedString.parse("", int.class);
     var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
 
     for(var i = 0; i < policies.size(); i++) {

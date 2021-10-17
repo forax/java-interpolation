@@ -1,16 +1,17 @@
 package com.github.forax.interpolator;
 
 import java.util.List;
+import java.util.Objects;
 
 public sealed interface TemplatedString permits TemplatedStringImpl {
   /**
-   * The character used to represent a hole/a binding in the templated string
+   * The character used to represent a parameter in the templated string
    */
   char OBJECT_REPLACEMENT_CHARACTER = '\uFFFC';
 
   /**
    * The templated string as a string with the character {@link #OBJECT_REPLACEMENT_CHARACTER} to represent
-   * the holes in the templated string
+   * the parameters in the templated string
    * @return the templated string
    *
    * @see #segments()
@@ -24,21 +25,22 @@ public sealed interface TemplatedString permits TemplatedStringImpl {
   Class<?> returnType();
 
   /**
-   * The bindings in the order of templated string.
-   * @return the bindings
+   * The parameters of the templated string.
+   * @return the parameters
    */
-  List<Binding> bindings();
+  List<Parameter> parameters();
+
 
   // helper methods
 
   /**
-   * The segments of the templated string composed of {@link Text) and {@link Binding}.
+   * The segments of the templated string composed of {@link Text) and {@link Parameter }.
    * @return an iterable on the segments of the templated string
    */
   Iterable<Segment> segments();
 
   /**
-   * A segment is either a {@link Text} ou a {@link Binding}.
+   * A segment is either a {@link Text} ou a {@link Parameter}.
    */
   sealed interface Segment { }
 
@@ -48,6 +50,10 @@ public sealed interface TemplatedString permits TemplatedStringImpl {
    * @see #segments()
    */
   record Text(String text) implements Segment {
+    public Text {
+      Objects.requireNonNull(text);
+    }
+
     @Override
     public String toString() {
       return text;
@@ -55,26 +61,32 @@ public sealed interface TemplatedString permits TemplatedStringImpl {
   }
 
   /**
-   * A {@link Segment} describing a binding
+   * A {@link Segment} describing a parameter
    *
    * @see #segments()
    */
-  record Binding(String name, Class<?> type, int argumentIndex) implements Segment {
+  record Parameter(Class<?> type, int index) implements Segment {
+    public Parameter {
+      Objects.requireNonNull(type);
+      if (index < 0) {
+        throw new IllegalArgumentException("negative index " + index);
+      }
+    }
+
     @Override
     public String toString() {
-      return "\\(" + type.getName() + " " + name + ")";
+      return "\\(" + type.getName() + " param" + index + ")";
     }
   }
 
   /**
    * Creates a templated string.
-   * @param template a string with {@link #OBJECT_REPLACEMENT_CHARACTER} to represent the holes.
+   * @param template a string with {@link #OBJECT_REPLACEMENT_CHARACTER} to represent the parameters.
    * @param returnType the return type of the expression
-   * @param bindingNames the names of the bindings
-   * @param bindingTypes the types of the bindings
+   * @param parameterTypes the types of the parameters
    * @return a new templated string
    */
-  static TemplatedString parse(String template, Class<?> returnType, String[] bindingNames, Class<?>... bindingTypes) {
-    return TemplatedStringImpl.parse(template, returnType, bindingNames, bindingTypes);
+  static TemplatedString parse(String template, Class<?> returnType, Class<?>... parameterTypes) {
+    return TemplatedStringImpl.parse(template, returnType, parameterTypes);
   }
 }

@@ -1,6 +1,6 @@
 package com.github.forax.interpolator;
 
-import com.github.forax.interpolator.TemplatedString.Binding;
+import com.github.forax.interpolator.TemplatedString.Parameter;
 import com.github.forax.interpolator.TemplatedString.Text;
 import com.github.forax.interpolator.runtime.TemplatePolicyFactory;
 import org.junit.jupiter.api.Test;
@@ -72,7 +72,7 @@ public class GrammarTemplatePolicyTest {
               symbols.add(new Term(matcher.group()));
             }
           }
-          case Binding binding -> symbols.add((Symbol) args[binding.argumentIndex()]);
+          case Parameter parameter -> symbols.add((Symbol) args[parameter.index()]);
         }
       }
       return symbols;
@@ -116,12 +116,7 @@ public class GrammarTemplatePolicyTest {
         \uFFFC = record \uFFFC ( \uFFFC ) { }
         \uFFFC = \uFFFC \uFFFC
         \uFFFC = \uFFFC , \uFFFC \uFFFC
-        """,
-      "type", "id",
-      "type", "id",
-      "type", "id", "component",
-      "component", "id", "id",
-      "component", "component", "id", "id"
+        """
   ).dynamicInvoker();
 
   @Test
