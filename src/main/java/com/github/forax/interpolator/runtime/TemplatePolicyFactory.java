@@ -36,14 +36,14 @@ public class TemplatePolicyFactory {
   }
 
   private static final class InliningCache extends MutableCallSite {
-    private static final MethodHandle SLOW_PATH, DEOPTIMIZE, TYPE_CHECK;
+    private static final MethodHandle SLOW_PATH, SET_TARGET, TYPE_CHECK;
     static {
       var lookup = MethodHandles.lookup();
       try {
         SLOW_PATH = lookup.findVirtual(InliningCache.class, "slowPath",
             methodType(MethodHandle.class, TemplatePolicy.class));
-        DEOPTIMIZE = lookup.findVirtual(InliningCache.class, "deoptimize",
-            methodType(MethodHandle.class));
+        SET_TARGET = lookup.findVirtual(InliningCache.class, "setTarget",
+            methodType(void.class, MethodHandle.class));
         TYPE_CHECK = lookup.findStatic(InliningCache.class, "typeCheck",
             methodType(boolean.class, Class.class, TemplatePolicy.class));
 
@@ -72,7 +72,7 @@ public class TemplatePolicyFactory {
         throw new LinkageError("return value of " + receiver.getName() + " is null");
       }
       try {
-        target = target.asType(type());
+        target = target.asType(type);
       } catch(WrongMethodTypeException e) {
         throw new LinkageError( target + " from template " + receiver.getName() + " is incompatible with " + type, e);
       }
@@ -80,12 +80,14 @@ public class TemplatePolicyFactory {
       var declaredReceiver = type.parameterType(0);
       if (Modifier.isFinal(declaredReceiver.getModifiers())) {
         setTarget(target);  // avoid a class check, maybe not necessary
-      } else {
-        var guard = guardWithTest(TYPE_CHECK.bindTo(receiver).asType(MethodType.methodType(boolean.class, type.parameterType(0))),
-            target,
-            foldArguments(exactInvoker(type), dropArguments(DEOPTIMIZE.bindTo(this), 0, type.parameterList())));
-        setTarget(guard);
+        return target;
       }
+      var apply = applyAsMethodHandle(template).asType(type);
+      var guard = guardWithTest(
+          TYPE_CHECK.bindTo(receiver).asType(MethodType.methodType(boolean.class, type.parameterType(0))),
+          target,
+          foldArguments(apply, insertArguments(SET_TARGET, 0, this, apply)));
+      setTarget(guard);
       return target;
     }
 
