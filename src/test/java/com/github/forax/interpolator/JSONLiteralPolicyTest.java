@@ -1,8 +1,6 @@
 package com.github.forax.interpolator;
 
 import com.github.forax.interpolator.JSONLiteralPolicyTest.ToyJSONParser.JSONVisitor;
-import com.github.forax.interpolator.TemplatedString.Binding;
-import com.github.forax.interpolator.TemplatedString.Text;
 import com.github.forax.interpolator.runtime.TemplatePolicyFactory;
 import org.junit.jupiter.api.Test;
 
@@ -60,7 +58,7 @@ public class JSONLiteralPolicyTest {
       RIGHT_BRACKET("(\\])"),
       COLON("(\\:)"),
       COMMA("(\\,)"),
-      HOLE("\\\\\\(([^\\)]+)\\)"),
+      HOLE("(\uFFFC)"),
       BLANK("([ \t]+)")
       ;
 
@@ -122,9 +120,8 @@ public class JSONLiteralPolicyTest {
        * Called during the parsing of the content of an object or an array.
        *
        * @param key the key of the value if inside an object, {@code null} otherwise.
-       * @param name the name of the binding
        */
-      void hole(String key, String name);
+      void hole(String key);
 
       /**
        * Called during the parsing at the beginning of an object.
@@ -199,7 +196,7 @@ public class JSONLiteralPolicyTest {
         case INTEGER -> visitor.value(currentKey, parseInt(token.text));
         case DOUBLE -> visitor.value(currentKey, parseDouble(token.text));
         case STRING -> visitor.value(currentKey, token.text);
-        case HOLE -> visitor.hole(currentKey, token.text);
+        case HOLE -> visitor.hole(currentKey);
         case LEFT_CURLY -> {
           visitor.startObject(currentKey);
           parseObject(currentKey, lexer, visitor);
@@ -297,20 +294,9 @@ public class JSONLiteralPolicyTest {
   }
 
   public static final class JSONLiteralTemplatePolicy implements TemplatePolicy<Object, RuntimeException> {
-    private static String toInputText(TemplatedString template) {
-      var builder = new StringBuilder();
-      for(var token: template.tokens()) {
-        builder.append(switch(token) {
-          case Text text -> text.text();
-          case Binding binding -> "\\(" + binding.name() + ")";
-        });
-      }
-      return builder.toString();
-    }
-
     @Override
     public Object apply(TemplatedString template, Object... args) {
-      var input = toInputText(template);
+      var input = template.template();
       var visitor = new JSONVisitor() {
         private final ArrayDeque<Builder> stack = new ArrayDeque<>();
         private Object root;
@@ -322,7 +308,7 @@ public class JSONLiteralPolicyTest {
         }
 
         @Override
-        public void hole(String key, String name) {
+        public void hole(String key) {
           stack.peek().add(key, args[argumentIndex++]);
         }
 
@@ -368,8 +354,6 @@ public class JSONLiteralPolicyTest {
 
     @Override
     public MethodHandle asMethodHandle(TemplatedString template) {
-      System.err.println("asMethodHandle: template " + template);
-      System.err.println("asMethodHandle: template bindings " + template.bindings());
       if (template.bindings().isEmpty()) {
         var result = apply(template);
         return MethodHandles.dropArguments(MethodHandles.constant(result.getClass(), result), 0, getClass());
@@ -382,11 +366,12 @@ public class JSONLiteralPolicyTest {
   public void testApplyJSONObject() {
     var template = TemplatedString.parse("""
         {
-          "name": \\(name),
-          "age": \\(age),
+          "name": \uFFFC,
+          "age": \uFFFC,
           "sex": true
         }
-        """, JSONObject.class, List.of(String.class, int.class));
+        """,
+        JSONObject.class, new String[]{  "name", "age" }, String.class, int.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonObject = (JSONObject) policy.apply(template, "Bob", 77);
     assertEquals(Map.of("name", "Bob", "age", 77, "sex", true), jsonObject.map());
@@ -395,8 +380,9 @@ public class JSONLiteralPolicyTest {
   @Test
   public void testApplyJSONArray() {
     var template = TemplatedString.parse("""
-        [ 42, \\(value1), \\(value2), "Ana" ]
-        """, JSONObject.class, List.of(String.class, boolean.class));
+        [ 42, \uFFFC, \uFFFC, "Ana" ]
+        """,
+        JSONObject.class, new String[] { "value1", "value2" }, String.class, boolean.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonArray = (JSONArray) policy.apply(template, "Alice", false);
     assertEquals(List.of(42, "Alice", false, "Ana"), jsonArray.list());
@@ -408,11 +394,12 @@ public class JSONLiteralPolicyTest {
       methodType(JSONObject.class, JSONLiteralTemplatePolicy.class, String.class, int.class),
       """
         {
-          "name": \\(name),
-          "age": \\(age),
+          "name": \uFFFC,
+          "age": \uFFFC,
           "sex": true
         }
-        """
+        """,
+      "name", "age"
   ).dynamicInvoker();
 
   @Test
@@ -440,7 +427,7 @@ public class JSONLiteralPolicyTest {
   }
 
   @Test
-  public void testIndyObjectConst() throws Throwable {
+  public void testIndyObjectConst() {
     assertAll(
         () -> assertEquals(Map.of("x", 35.2, "y", 42.9), constObject().map()),
         () -> assertSame(constObject(), constObject())
@@ -452,8 +439,9 @@ public class JSONLiteralPolicyTest {
       "",
       methodType(JSONArray.class, JSONLiteralTemplatePolicy.class, String.class, boolean.class),
       """
-        [ 42, \\(value1), \\(value2), "Ana" ]
-        """
+        [ 42, \uFFFC, \uFFFC, "Ana" ]
+        """,
+      "value1", "value2"
   ).dynamicInvoker();
 
   @Test
@@ -478,7 +466,7 @@ public class JSONLiteralPolicyTest {
   }
 
   @Test
-  public void testIndyArrayConst() throws Throwable {
+  public void testIndyArrayConst() {
     assertAll(
         () -> assertEquals(List.of(3.24, "foobar"), constArray().list()),
         () -> assertSame(constArray(), constArray())

@@ -62,21 +62,25 @@ public class GrammarTemplatePolicyTest {
   static class GrammarTemplatePolicy implements TemplatePolicy<Grammar, RuntimeException> {
     private static final Pattern IMPLICIT_TERMINAL = Pattern.compile("[A-Za-z]+|\\{|\\}|\\(|\\)|,|\n");
 
+    private static List<Symbol> findSymbols(TemplatedString template, Object[] args) {
+      var symbols = new ArrayList<Symbol>();
+      for(var segment: template.segments()) {
+        switch(segment) {
+          case Text text -> {
+            var matcher = IMPLICIT_TERMINAL.matcher(text.text());
+            while(matcher.find()) {
+              symbols.add(new Term(matcher.group()));
+            }
+          }
+          case Binding binding -> symbols.add((Symbol) args[binding.argumentIndex()]);
+        }
+      }
+      return symbols;
+    }
+
     @Override
     public Grammar apply(TemplatedString template, Object... args) {
-      var symbols = template.tokens().stream()
-          .<Symbol>mapMulti((token, consumer) -> {
-            switch(token) {
-              case Text text -> {
-                var matcher = IMPLICIT_TERMINAL.matcher(text.text());
-                while(matcher.find()) {
-                  consumer.accept(new Term(matcher.group()));
-                }
-              }
-              case Binding binding -> consumer.accept((Symbol) args[binding.argumentIndex()]);
-            }
-          }).toList();
-
+      var symbols = findSymbols(template, args);
       var productions = new ArrayList<Prod>();
       var currentProduction = new ArrayList<Symbol>();
       var currentNonTerminal = (NonTerm) null;
@@ -107,12 +111,17 @@ public class GrammarTemplatePolicyTest {
           NonTerm.class, Term.class, Term.class,
           NonTerm.class, NonTerm.class, Term.class, Term.class),
       """
-        \\(type) = class \\(id) { }
-        \\(type) = interface \\(id) { }
-        \\(type) = record \\(id) ( \\(component) ) { }
-        \\(component) = \\(id) \\(id)
-        \\(component) = \\(component) , \\(id) \\(id)
-        """
+        \uFFFC = class \uFFFC { }
+        \uFFFC = interface \uFFFC { }
+        \uFFFC = record \uFFFC ( \uFFFC ) { }
+        \uFFFC = \uFFFC \uFFFC
+        \uFFFC = \uFFFC , \uFFFC \uFFFC
+        """,
+      "type", "id",
+      "type", "id",
+      "type", "id", "component",
+      "component", "id", "id",
+      "component", "component", "id", "id"
   ).dynamicInvoker();
 
   @Test

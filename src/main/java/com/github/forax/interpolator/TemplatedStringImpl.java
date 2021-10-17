@@ -1,43 +1,75 @@
 package com.github.forax.interpolator;
 
-import java.lang.invoke.MethodType;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.StringJoiner;
 
-import static java.util.stream.Collectors.joining;
-
-record TemplatedStringImpl(List<Token> tokens, Class<?> returnType, List<Binding> bindings) implements TemplatedString {
-  private static final Pattern PATTERN = Pattern.compile("\\\\\\(([^\\)]+)\\)");
-
-  static TemplatedStringImpl parse(String text, Class<?> returnType, List<Class<?>> bindingTypes) {
-    var tokens = new ArrayList<Token>();
-    var bindings = new ArrayList<Binding>();
-    var matcher = PATTERN.matcher(text);
-    var current = 0;
-    while(matcher.find(current)) {
-      if (matcher.start() != current) {
-        tokens.add(new Text(text.substring(current, matcher.start())));
-      }
-      var argumentIndex = bindings.size();
-      if (argumentIndex == bindingTypes.size()) {
-        throw new IllegalArgumentException("the number of bindings does not match the number of parameters " + text + " " + bindingTypes);
-      }
-      var name = text.substring(matcher.start(1), matcher.end(1));
-      var binding = new Binding(name, bindingTypes.get(argumentIndex), argumentIndex);
-      tokens.add(binding);
-      bindings.add(binding);
-      current = matcher.end();
+record TemplatedStringImpl(String template, Class<?> returnType, List<Binding> bindings) implements TemplatedString {
+  static TemplatedStringImpl parse(String template, Class<?> returnType, String[] bindingNames, Class<?>... bindingTypes) {
+    Objects.requireNonNull(template, "template is null");
+    Objects.requireNonNull(returnType, "returnType is null");
+    Objects.requireNonNull(bindingNames, "bindingNames is null");
+    Objects.requireNonNull(bindingTypes, "bindingTypes is null");
+    var bindingCount = (int) template.chars().filter(c -> c == OBJECT_REPLACEMENT_CHARACTER).count();
+    if (bindingNames.length != bindingCount) {
+      throw new IllegalArgumentException("invalid number of binding names");
     }
-    if (current != text.length()) {
-      tokens.add(new Text(text.substring(current)));
+    if (bindingTypes.length != bindingCount) {
+      throw new IllegalArgumentException("invalid number of binding names");
     }
-    return new TemplatedStringImpl(List.copyOf(tokens), returnType, List.copyOf(bindings));
+    var bindings = new Binding[bindingCount];
+    for(var i = 0; i < bindingCount; i++) {
+      var bindingName = bindingNames[i];
+      Objects.requireNonNull(bindingName, "binding name at " + i + " is null");
+      var bindingType = bindingTypes[i];
+      Objects.requireNonNull(bindingName, "binding type at " + i + " is null");
+      bindings[i] = new Binding(bindingName, bindingType, i);
+    }
+    return new TemplatedStringImpl(template, returnType, List.of(bindings));
+  }
+
+  @Override
+  public Iterable<Segment> segments() {
+    return () -> new Iterator<>() {
+      private int index;
+      private int bindingIndex;
+
+      @Override
+      public boolean hasNext() {
+        return index < template.length();
+      }
+
+      @Override
+      public Segment next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        if (template.charAt(index) == OBJECT_REPLACEMENT_CHARACTER) {
+          index++;
+          return bindings.get(bindingIndex++);
+        }
+        for(var i = index + 1; i < template.length(); i++) {
+          if (template.charAt(i) == OBJECT_REPLACEMENT_CHARACTER) {
+            var text = new Text(template.substring(index, i));
+            index = i;
+            return text;
+          }
+        }
+        var text = new Text(template.substring(index));
+        index = template.length();
+        return text;
+      }
+    };
   }
 
   @Override
   public String toString() {
-    return tokens.stream().map(Token::toString).collect(joining("", "\"", "\":" + returnType));
+    var joiner = new StringJoiner("", "\"", "\":" + returnType);
+    for(var segment: segments()) {
+      joiner.add(segment.toString());
+    }
+    return joiner.toString();
   }
 }

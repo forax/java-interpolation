@@ -11,7 +11,7 @@ import static java.lang.invoke.MethodType.methodType;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class HierarchyPolicyTest {
-  static abstract class TemplatePolicyBase implements TemplatePolicy<Integer, RuntimeException> {
+  abstract static class TemplatePolicyBase implements TemplatePolicy<Integer, RuntimeException> {
     @Override
     public abstract Integer apply(TemplatedString template, Object... args);
   }
@@ -37,7 +37,7 @@ public class HierarchyPolicyTest {
 
   @Test
   public void testApplyHierarchy() {
-    var template = TemplatedString.parse("", int.class, List.of());
+    var template = TemplatedString.parse("", int.class, new String[0]);
     var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
 
     for(var i = 0; i < policies.size(); i++) {
@@ -54,7 +54,6 @@ public class HierarchyPolicyTest {
 
   @Test
   public void testIndyHierarchy() throws Throwable {
-    var template = TemplatedString.parse("", int.class, List.of());
     var policies = List.of(new TemplatePolicySubtype1(), new TemplatePolicySubtype2(), new TemplatePolicySubtype3());
 
     for(var i = 0; i < policies.size(); i++) {

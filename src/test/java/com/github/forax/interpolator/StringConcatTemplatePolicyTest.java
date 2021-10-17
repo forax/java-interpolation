@@ -10,7 +10,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.StringConcatException;
 import java.lang.invoke.StringConcatFactory;
 import java.util.Arrays;
-import java.util.List;
 
 import static java.lang.invoke.MethodType.methodType;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -25,8 +24,8 @@ public class StringConcatTemplatePolicyTest {
         throw new IllegalArgumentException(template + " does not accept " + Arrays.toString(args));
       }
       var builder = new StringBuilder();
-      for(var token: template.tokens()) {
-        builder.append(switch(token) {
+      for(var segment: template.segments()) {
+        builder.append(switch(segment) {
           case Text text -> text.text();
           case Binding binding -> args[binding.argumentIndex()];
         });
@@ -39,14 +38,16 @@ public class StringConcatTemplatePolicyTest {
 
   @Test
   public void testStringConcatApply() {
-    var template = TemplatedString.parse("Hello \\(name) !", String.class, List.of(String.class));
+    var template = TemplatedString.parse("Hello \uFFFC !",
+        String.class, new String[] { "name" }, String.class);
     assertEquals("Hello Bob !",
         FMT.apply(template, "Bob"));
   }
 
   @Test
   public void testStringConcatApplyWrongNumberOfArguments() {
-    var template = TemplatedString.parse("Hello \\(name) !", String.class, List.of(String.class));
+    var template = TemplatedString.parse("Hello \uFFFC !",
+        String.class, new String[] { "name" }, String.class);
     assertAll(
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template)),
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template, "one", "two"))
@@ -57,7 +58,8 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcat.class, String.class, int.class),
-      "name: \\(name) age: \\(age)"
+      "name: \uFFFC age: \uFFFC",
+      "name", "age"
   ).dynamicInvoker();
 
   @Test
@@ -74,14 +76,7 @@ public class StringConcatTemplatePolicyTest {
 
     @Override
     public MethodHandle asMethodHandle(TemplatedString template) {
-      var builder = new StringBuilder();
-      for(var token: template.tokens()) {
-        builder.append(switch(token) {
-          case Text text -> text.text();
-          case Binding binding -> "\u0001";
-        });
-      }
-      var recipe = builder.toString();
+      var recipe = template.template().replace('\uFFFC', '\u0001');
       var methodType = methodType(template.returnType(), template.bindings().stream().map(Binding::type).toArray(Class[]::new));
       MethodHandle target;
       try {
@@ -100,7 +95,8 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcatOptimized.class, String.class, int.class),
-      "name: \\(name) age: \\(age)"
+      "name: \uFFFC age: \uFFFC",
+      "age", "name"
   ).dynamicInvoker();
 
   @Test

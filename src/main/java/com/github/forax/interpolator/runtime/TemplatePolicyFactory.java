@@ -12,7 +12,6 @@ import java.lang.invoke.MutableCallSite;
 import java.lang.invoke.WrongMethodTypeException;
 import java.lang.reflect.Modifier;
 
-import static java.lang.invoke.MethodHandles.dropArguments;
 import static java.lang.invoke.MethodHandles.exactInvoker;
 import static java.lang.invoke.MethodHandles.foldArguments;
 import static java.lang.invoke.MethodHandles.guardWithTest;
@@ -90,16 +89,10 @@ public class TemplatePolicyFactory {
       setTarget(guard);
       return target;
     }
-
-    private MethodHandle deoptimize() {
-      var target = applyAsMethodHandle(template).asType(type());
-      setTarget(target);
-      return target;
-    }
   }
 
-  public static CallSite boostrap(Lookup lookup, String name, MethodType type, String template) {
-    var templatedString = TemplatedString.parse(template, type.returnType(), type.dropParameterTypes(0, 1).parameterList());
+  public static CallSite boostrap(Lookup lookup, String name, MethodType type, String template, String... bindingNames) {
+    var templatedString = TemplatedString.parse(template, type.returnType(), bindingNames, type.dropParameterTypes(0, 1).parameterArray());
     return new InliningCache(type, templatedString);
   }
 }
