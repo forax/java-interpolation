@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import static java.util.stream.Collectors.joining;
 
 record TemplatedStringImpl(List<Token> tokens, Class<?> returnType, List<Binding> bindings) implements TemplatedString {
-  private static final Pattern PATTERN = Pattern.compile("\\\\\\(([A-Za-z]+)\\)");
+  private static final Pattern PATTERN = Pattern.compile("\\\\\\(([^\\)]+)\\)");
 
   static TemplatedStringImpl parse(String text, Class<?> returnType, List<Class<?>> bindingTypes) {
     var tokens = new ArrayList<Token>();
