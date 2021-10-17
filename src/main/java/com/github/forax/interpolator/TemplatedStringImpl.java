@@ -39,19 +39,20 @@ record TemplatedStringImpl(String template, Class<?> returnType, List<Parameter>
         if (!hasNext()) {
           throw new NoSuchElementException();
         }
+        var index = this.index;
         if (template.charAt(index) == OBJECT_REPLACEMENT_CHARACTER) {
-          index++;
+          this.index = index + 1;
           return parameters.get(parameterIndex++);
         }
         for(var i = index + 1; i < template.length(); i++) {
           if (template.charAt(i) == OBJECT_REPLACEMENT_CHARACTER) {
             var text = new Text(template.substring(index, i));
-            index = i;
+            this.index = i;
             return text;
           }
         }
         var text = new Text(template.substring(index));
-        index = template.length();
+        this.index = template.length();
         return text;
       }
     };
