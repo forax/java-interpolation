@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StringConcatTemplatePolicyTest {
-  static final class StringConcat implements TemplatePolicy<String, RuntimeException> {
+  static final class StringConcat implements TemplatePolicy<String, Object, RuntimeException> {
     @Override
     public String apply(TemplatedString template, Object... args) {
       if (template.parameters().size() != args.length) {
@@ -39,7 +39,7 @@ public class StringConcatTemplatePolicyTest {
   @Test
   public void testStringConcatApply() {
     var template = TemplatedString.parse("Hello \uFFFC !",
-        String.class, String.class);
+        String.class, Object[].class, String.class);
     assertEquals("Hello Bob !",
         FMT.apply(template, "Bob"));
   }
@@ -47,7 +47,7 @@ public class StringConcatTemplatePolicyTest {
   @Test
   public void testStringConcatApplyWrongNumberOfArguments() {
     var template = TemplatedString.parse("Hello \uFFFC !",
-        String.class, String.class);
+        String.class, Object[].class, String.class);
     assertAll(
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template)),
         () -> assertThrows(IllegalArgumentException.class, () -> FMT.apply(template, "one", "two"))
@@ -58,6 +58,7 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcat.class, String.class, int.class),
+      Object[].class,
       "name: \uFFFC age: \uFFFC"
   ).dynamicInvoker();
 
@@ -67,7 +68,7 @@ public class StringConcatTemplatePolicyTest {
     assertEquals("name: Bob age: 24", text);
   }
 
-  static final class StringConcatOptimized implements TemplatePolicy<String, RuntimeException> {
+  static final class StringConcatOptimized implements TemplatePolicy<String, Object, RuntimeException> {
     @Override
     public String apply(TemplatedString template, Object... args) {
       throw new UnsupportedOperationException("Not implements !");
@@ -94,6 +95,7 @@ public class StringConcatTemplatePolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(String.class, StringConcatOptimized.class, String.class, int.class),
+      Object[].class,
       "name: \uFFFC age: \uFFFC"
   ).dynamicInvoker();
 

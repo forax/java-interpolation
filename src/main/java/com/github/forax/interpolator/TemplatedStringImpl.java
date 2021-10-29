@@ -6,10 +6,11 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-record TemplatedStringImpl(String template, Class<?> returnType, List<Parameter> parameters) implements TemplatedString {
-  static TemplatedStringImpl parse(String template, Class<?> returnType, Class<?>... parameterTypes) {
+record TemplatedStringImpl(String template, Class<?> returnType, Class<?> varargsType, List<Parameter> parameters) implements TemplatedString {
+  static TemplatedStringImpl parse(String template, Class<?> returnType, Class<?> varargsType, Class<?>... parameterTypes) {
     Objects.requireNonNull(template, "template is null");
     Objects.requireNonNull(returnType, "returnType is null");
+    Objects.requireNonNull(varargsType, "varargs is null");
     Objects.requireNonNull(parameterTypes, "parameterTypes is null");
     var parameterCount = (int) template.chars().filter(c -> c == OBJECT_REPLACEMENT_CHARACTER).count();
     if (parameterTypes.length != parameterCount) {
@@ -20,7 +21,7 @@ record TemplatedStringImpl(String template, Class<?> returnType, List<Parameter>
       var parameterType = parameterTypes[i];
       parameters[i] = new Parameter(parameterType, i);
     }
-    return new TemplatedStringImpl(template, returnType, List.of(parameters));
+    return new TemplatedStringImpl(template, returnType, varargsType, List.of(parameters));
   }
 
   @Override

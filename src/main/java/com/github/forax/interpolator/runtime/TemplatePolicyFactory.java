@@ -31,7 +31,7 @@ public class TemplatePolicyFactory {
   }
 
   public static MethodHandle applyAsMethodHandle(TemplatedString template) {
-    return insertArguments(TEMPLATE_POLICY_APPLY, 1, template).asVarargsCollector(Object[].class);
+    return insertArguments(TEMPLATE_POLICY_APPLY, 1, template).asVarargsCollector(template.varargsType());
   }
 
   private static final class InliningCache extends MutableCallSite {
@@ -59,11 +59,11 @@ public class TemplatePolicyFactory {
       setTarget(foldArguments(exactInvoker(type), SLOW_PATH.bindTo(this).asType(MethodType.methodType(MethodHandle.class, type.parameterType(0)))));
     }
 
-    private static boolean typeCheck(Class<?> clazz, TemplatePolicy<?,?> policy) {
+    private static boolean typeCheck(Class<?> clazz, TemplatePolicy<?,?,?> policy) {
       return policy.getClass() == clazz;
     }
 
-    private MethodHandle slowPath(TemplatePolicy<?,?> policy) {
+    private MethodHandle slowPath(TemplatePolicy<?,?,?> policy) {
       var receiver = policy.getClass();
       var type = type();
       var target = policy.asMethodHandle(template);
@@ -91,8 +91,8 @@ public class TemplatePolicyFactory {
     }
   }
 
-  public static CallSite boostrap(Lookup lookup, String name, MethodType type, String template) {
-    var templatedString = TemplatedString.parse(template, type.returnType(), type.dropParameterTypes(0, 1).parameterArray());
+  public static CallSite boostrap(Lookup lookup, String name, MethodType type, Class<?> varargsType, String template) {
+    var templatedString = TemplatedString.parse(template, type.returnType(), varargsType, type.dropParameterTypes(0, 1).parameterArray());
     return new InliningCache(type, templatedString);
   }
 }

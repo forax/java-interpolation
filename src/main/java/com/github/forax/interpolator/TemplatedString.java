@@ -25,6 +25,12 @@ public sealed interface TemplatedString permits TemplatedStringImpl {
   Class<?> returnType();
 
   /**
+   * The type of the varargs containing the parameters of the templated string
+   * @return the type of the varargs containing the parameters of the templated string
+   */
+  Class<?> varargsType();
+
+  /**
    * The parameters of the templated string.
    * @return the parameters
    */
@@ -83,10 +89,11 @@ public sealed interface TemplatedString permits TemplatedStringImpl {
    * Creates a templated string.
    * @param template a string with {@link #OBJECT_REPLACEMENT_CHARACTER} to represent the parameters.
    * @param returnType the return type of the expression
+   * @param varargsType types of the varargs containing the parameter
    * @param parameterTypes the types of the parameters
    * @return a new templated string
    */
-  static TemplatedString parse(String template, Class<?> returnType, Class<?>... parameterTypes) {
-    return TemplatedStringImpl.parse(template, returnType, parameterTypes);
+  static TemplatedString parse(String template, Class<?> returnType, Class<?> varargsType, Class<?>... parameterTypes) {
+    return TemplatedStringImpl.parse(template, returnType, varargsType, parameterTypes);
   }
 }

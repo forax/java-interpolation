@@ -59,10 +59,10 @@ public class GrammarTemplatePolicyTest {
     }
   }
 
-  static class GrammarTemplatePolicy implements TemplatePolicy<Grammar, RuntimeException> {
+  static class GrammarTemplatePolicy implements TemplatePolicy<Grammar, Symbol, RuntimeException> {
     private static final Pattern IMPLICIT_TERMINAL = Pattern.compile("[A-Za-z]+|\\{|\\}|\\(|\\)|,|\n");
 
-    private static List<Symbol> findSymbols(TemplatedString template, Object[] args) {
+    private static List<Symbol> findSymbols(TemplatedString template, Symbol[] args) {
       var symbols = new ArrayList<Symbol>();
       for(var segment: template.segments()) {
         switch(segment) {
@@ -72,14 +72,14 @@ public class GrammarTemplatePolicyTest {
               symbols.add(new Term(matcher.group()));
             }
           }
-          case Parameter parameter -> symbols.add((Symbol) args[parameter.index()]);
+          case Parameter parameter -> symbols.add(args[parameter.index()]);
         }
       }
       return symbols;
     }
 
     @Override
-    public Grammar apply(TemplatedString template, Object... args) {
+    public Grammar apply(TemplatedString template, Symbol... args) {
       var symbols = findSymbols(template, args);
       var productions = new ArrayList<Prod>();
       var currentProduction = new ArrayList<Symbol>();
@@ -110,6 +110,7 @@ public class GrammarTemplatePolicyTest {
           NonTerm.class, Term.class, NonTerm.class,
           NonTerm.class, Term.class, Term.class,
           NonTerm.class, NonTerm.class, Term.class, Term.class),
+      Symbol[].class,
       """
         \uFFFC = class \uFFFC { }
         \uFFFC = interface \uFFFC { }

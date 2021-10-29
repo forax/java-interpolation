@@ -293,7 +293,7 @@ public class JSONLiteralPolicyTest {
     return value instanceof String? "\"" + value + "\"": String.valueOf(value);
   }
 
-  public static final class JSONLiteralTemplatePolicy implements TemplatePolicy<Object, RuntimeException> {
+  public static final class JSONLiteralTemplatePolicy implements TemplatePolicy<Object, Object, RuntimeException> {
     @Override
     public Object apply(TemplatedString template, Object... args) {
       var input = template.template();
@@ -371,7 +371,7 @@ public class JSONLiteralPolicyTest {
           "sex": true
         }
         """,
-        JSONObject.class, String.class, int.class);
+        JSONObject.class, Object[].class, String.class, int.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonObject = (JSONObject) policy.apply(template, "Bob", 77);
     assertEquals(Map.of("name", "Bob", "age", 77, "sex", true), jsonObject.map());
@@ -382,7 +382,7 @@ public class JSONLiteralPolicyTest {
     var template = TemplatedString.parse("""
         [ 42, \uFFFC, \uFFFC, "Ana" ]
         """,
-        JSONObject.class, String.class, boolean.class);
+        JSONObject.class, Object[].class, String.class, boolean.class);
     var policy = new JSONLiteralTemplatePolicy();
     var jsonArray = (JSONArray) policy.apply(template, "Alice", false);
     assertEquals(List.of(42, "Alice", false, "Ana"), jsonArray.list());
@@ -392,6 +392,7 @@ public class JSONLiteralPolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(JSONObject.class, JSONLiteralTemplatePolicy.class, String.class, int.class),
+      Object[].class,
       """
         {
           "name": \uFFFC,
@@ -412,6 +413,7 @@ public class JSONLiteralPolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(JSONObject.class, JSONLiteralTemplatePolicy.class),
+      Object[].class,
       """
         {
           "x": 35.2,
@@ -437,6 +439,7 @@ public class JSONLiteralPolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(JSONArray.class, JSONLiteralTemplatePolicy.class, String.class, boolean.class),
+      Object[].class,
       """
         [ 42, \uFFFC, \uFFFC, "Ana" ]
         """
@@ -453,6 +456,7 @@ public class JSONLiteralPolicyTest {
       MethodHandles.lookup(),
       "",
       methodType(JSONArray.class, JSONLiteralTemplatePolicy.class),
+      Object[].class,
       """
         [ 3.24, "foobar" ]
         """
