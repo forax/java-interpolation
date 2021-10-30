@@ -31,7 +31,8 @@ public class StringConcatTemplatePolicyTest {
         case Parameter parameter -> args[parameter.index()];
       });
     }
-    return TemplatePolicyResult.result(builder.toString());
+    var text = builder.toString();
+    return TemplatePolicyResult.result(text);
   }
 
   @Test
@@ -86,17 +87,14 @@ public class StringConcatTemplatePolicyTest {
         case Parameter parameter -> args[parameter.index()];
       });
     }
-    return TemplatePolicyResult.resultAndPolicyFactory(builder.toString(), StringConcatTemplatePolicyTest::stringConcatMetaFactory);
+    var text = builder.toString();
+    return TemplatePolicyResult.resultAndPolicyFactory(text, StringConcatTemplatePolicyTest::stringConcatMetaFactory);
   }
 
-  private static MethodHandle stringConcatMetaFactory(TemplatedString templatedString, MethodType methodType) {
+  private static MethodHandle stringConcatMetaFactory(TemplatedString templatedString, MethodType methodType) throws StringConcatException {
     var recipe = templatedString.template().replace(TemplatedString.OBJECT_REPLACEMENT_CHARACTER, '\u0001');
-    try {
-      return StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
+    return StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
           .dynamicInvoker();
-    } catch (StringConcatException e) {
-      throw (LinkageError) new LinkageError().initCause(e);
-    }
   }
 
 

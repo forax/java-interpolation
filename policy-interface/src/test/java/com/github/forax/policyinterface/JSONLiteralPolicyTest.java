@@ -352,7 +352,7 @@ public class JSONLiteralPolicyTest {
     }
 
     @Override
-    public MethodHandle asMethodHandle(TemplatedString template) {
+    public MethodHandle asMethodHandle(TemplatedString template) throws Throwable {
       if (template.parameters().isEmpty()) {
         var result = apply(template);
         return MethodHandles.dropArguments(MethodHandles.constant(result.getClass(), result), 0, getClass());

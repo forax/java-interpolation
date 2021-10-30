@@ -9,7 +9,7 @@ public final class TemplatePolicyResult<T> {
 
   @FunctionalInterface
   public interface PolicyFactory {
-    MethodHandle asMethodHandle(TemplatedString templatedString, MethodType callsiteType);
+    MethodHandle asMethodHandle(TemplatedString templatedString, MethodType callsiteType) throws Throwable;
   }
 
   private TemplatePolicyResult(T result, PolicyFactory policyFactory) {

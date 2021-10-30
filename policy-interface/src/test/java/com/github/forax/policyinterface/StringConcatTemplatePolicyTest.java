@@ -75,16 +75,11 @@ public class StringConcatTemplatePolicyTest {
     }
 
     @Override
-    public MethodHandle asMethodHandle(TemplatedString template) {
+    public MethodHandle asMethodHandle(TemplatedString template) throws StringConcatException {
       var recipe = template.template().replace('\uFFFC', '\u0001');
       var methodType = methodType(template.returnType(), template.parameters().stream().map(Parameter::type).toArray(Class[]::new));
-      MethodHandle target;
-      try {
-        target = StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
+      var target = StringConcatFactory.makeConcatWithConstants(MethodHandles.lookup(), "concat", methodType, recipe)
             .dynamicInvoker();
-      } catch (StringConcatException e) {
-        throw (LinkageError) new LinkageError().initCause(e);
-      }
       return MethodHandles.dropArguments(target, 0, StringConcatOptimized.class);
     }
   }

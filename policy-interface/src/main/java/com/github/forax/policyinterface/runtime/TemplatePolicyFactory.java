@@ -63,7 +63,7 @@ public class TemplatePolicyFactory {
       return policy.getClass() == clazz;
     }
 
-    private MethodHandle slowPath(TemplatePolicy<?,?,?> policy) {
+    private MethodHandle slowPath(TemplatePolicy<?,?,?> policy) throws Throwable {
       var receiver = policy.getClass();
       var type = type();
       var target = policy.asMethodHandle(template);

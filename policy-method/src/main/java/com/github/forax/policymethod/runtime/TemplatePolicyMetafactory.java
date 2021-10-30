@@ -57,7 +57,7 @@ public class TemplatePolicyMetafactory {
       return target.asVarargsCollector(originalMethodType.parameterType(originalMethodType.parameterCount() - 1));
     }
 
-    private Object slowPath(TemplatePolicyResult<?> result) {
+    private Object slowPath(TemplatePolicyResult<?> result) throws Throwable {
       var metaFactory = result.policyFactory();
       var type = type();
       if (metaFactory == null) {
