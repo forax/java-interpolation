@@ -6,11 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="java-interpolation" />
+        <module name="policy-interface" />
+        <module name="policy-method" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="java-interpolation" target="17" />
+      <module name="policy-interface" target="17" />
+      <module name="policy-method" target="17" />
     </bytecodeTargetLevel>
   </component>
 </project>

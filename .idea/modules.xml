@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/java-interpolation.iml" filepath="$PROJECT_DIR$/java-interpolation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/policy-interface/policy-interface.iml" filepath="$PROJECT_DIR$/policy-interface/policy-interface.iml" />
+      <module fileurl="file://$PROJECT_DIR$/template-method/policy-method.iml" filepath="$PROJECT_DIR$/template-method/policy-method.iml" />
     </modules>
   </component>
 </project>
