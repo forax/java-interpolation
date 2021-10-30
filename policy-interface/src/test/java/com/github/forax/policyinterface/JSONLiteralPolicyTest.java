@@ -296,7 +296,6 @@ public class JSONLiteralPolicyTest {
   public static final class JSONLiteralTemplatePolicy implements TemplatePolicy<Object, Object, RuntimeException> {
     @Override
     public Object apply(TemplatedString template, Object... args) {
-      var input = template.template();
       var visitor = new JSONVisitor() {
         private final ArrayDeque<Builder> stack = new ArrayDeque<>();
         private Object root;
@@ -348,7 +347,7 @@ public class JSONLiteralPolicyTest {
           stack.pop();
         }
       };
-      ToyJSONParser.parse(input, visitor);
+      ToyJSONParser.parse(template.template(), visitor);
       return visitor.root;
     }
 
